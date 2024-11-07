@@ -1,6 +1,7 @@
 import os
 import re
 import datetime
+import json
 
 import torch
 import torchmetrics
@@ -105,6 +106,10 @@ def main(args):
     # Create logdir with timestamp
     timestamp = datetime.datetime.now()
     args.logdir = f"logdir_{timestamp.strftime('%Y%m%d')}_{timestamp.strftime('%H%M%S')}"
+    # Save args to args.json in logdir
+    os.makedirs(args.logdir, exist_ok=True)
+    with open(os.path.join(args.logdir, 'args.json'), 'w') as f:
+        json.dump(vars(args), f, indent=4)
 
     dataset_images = ImageFolderDataset(path=args.dataset, use_labels=True, max_size=None, xflip=False)
     dataset_pairs = PairwiseImageDataset(dataset_images, size=args.pairwise_dataset_size)
