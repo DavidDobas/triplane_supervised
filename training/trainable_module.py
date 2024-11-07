@@ -124,6 +124,8 @@ class TrainableModule(torch.nn.Module):
         self.loss_metric.reset()
         self.metrics.reset()
         for xs, y in dataloader:
+            if isinstance(xs, list):
+                xs = tuple(xs)
             assert isinstance(xs, (tuple, torch.Tensor)), "The input must be either a single tensor or a tuple."
             assert isinstance(y, torch.Tensor), "The output must be a single tensor."
             xs, y = tuple(x.to(self.device) for x in (xs if isinstance(xs, tuple) else (xs,))), y.to(self.device)
