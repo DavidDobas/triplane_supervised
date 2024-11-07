@@ -17,7 +17,7 @@ import PIL.Image
 import json
 import torch
 import dnnlib
-
+import random
 try:
     import pyspng
 except ImportError:
@@ -246,7 +246,7 @@ class ImageFolderDataset(Dataset):
         return labels
     
 class PairwiseImageDataset(torch.utils.data.Dataset):
-    def __init__(self, dataset):
+    def __init__(self, dataset, size=None):
         """Create a pairwise dataset from a base ImageFolderDataset.
         
         Args:
@@ -257,6 +257,9 @@ class PairwiseImageDataset(torch.utils.data.Dataset):
         
         # Pre-compute all possible pairs of indices
         self.pairs = [(i, j) for i in range(self.n) for j in range(self.n) if i != j]
+        # If size is not None, randomly sample a subset of the pairs
+        if size is not None:
+            self.pairs = random.sample(self.pairs, size)
 
     def __len__(self):
         return len(self.pairs)
