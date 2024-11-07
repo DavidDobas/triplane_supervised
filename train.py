@@ -6,6 +6,7 @@ import json
 import torch
 import torchmetrics
 import torcheval
+import torchvision
 
 from training.trainable_module import TrainableModule
 from training.dataset import ImageFolderDataset, PairwiseImageDataset
@@ -97,8 +98,7 @@ class Model(TrainableModule):
             planes = self.conv(images)
         planes = planes.squeeze(1)
         generated_images = self.generator.synthesis(planes, c)
-        #Normalize 0-255 to 0-1
-        return generated_images / 255.0
+        return generated_images
 
 def main(args):
     model = Model(rendering_kwargs=args.rendering_kwargs, use_unet=args.use_unet, num_narrowings=args.num_narrowings)
@@ -128,14 +128,40 @@ def main(args):
     )
 
     model.fit(dataloader=train, epochs=args.epochs, dev=dev)
+    
+    # Save the first image from the dataset to logdir
+    sample = next(iter(dev))[0]
+
+    first_image = sample[0][1,:,:,:]  # Get the first image in the batch
+    first_image_path = os.path.join(args.logdir, 'first_image.png')
+    torchvision.utils.save_image(first_image, first_image_path)
+
+    # Make a prediction on the first image and its camera
+    model.eval()
+    with torch.no_grad():
+        predictions = model.predict(dev, as_numpy=False)
+    prediction_path = os.path.join(args.logdir, 'prediction.png')
+    torchvision.utils.save_image(predictions[0][0], prediction_path)
+
+import argparse
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train a model with specified parameters.")
+    parser.add_argument('--epochs', type=int, default=10, help='Number of epochs to train the model.')
+    parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate for the optimizer.')
+    parser.add_argument('--batch_size', type=int, default=8, help='Batch size for training.')
+    parser.add_argument('--use_unet', type=bool, default=True, help='Whether to use U-Net in the model.')
+    return parser.parse_args()
+
+args_user = parse_args()
 
 if __name__ == '__main__':
     args = Args(batch_size=8,
                 epochs=10,
-                lr=1e-3,
+                lr=1e-4,
                 dataset='datasets/chest_128.zip',
                 pairwise_dataset_size=10000,
-                use_unet=False,
+                use_unet=True,
                 num_narrowings=3)
     args.rendering_kwargs = rendering_options = {
         'image_resolution': 128,
@@ -161,4 +187,9 @@ if __name__ == '__main__':
             'avg_camera_radius': 10.5,
             'avg_camera_pivot': [0, 0, 0],
         })
+    args.epochs = args_user.epochs
+    args.lr = args_user.lr
+    args.batch_size = args_user.batch_size
+    args.use_unet = args_user.use_unet
+    print("Training for {} epochs with batch size {}".format(args.epochs, args.batch_size))
     main(args)
