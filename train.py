@@ -27,11 +27,9 @@ class Model(TrainableModule):
 def main(args):
     model = Model(rendering_kwargs=args.rendering_kwargs)
 
-    args.logdir = os.path.join("logs_par_search", "{}-{}-{}".format(
-        os.path.basename(globals().get("__file__", "notebook")),
-        datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S"),
-        ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(vars(args).items())))
-    ))
+    # Create logdir with timestamp
+    timestamp = datetime.datetime.now()
+    args.logdir = f"logdir_{timestamp.strftime('%Y%m%d')}_{timestamp.strftime('%H%M%S')}"
 
     dataset_images = ImageFolderDataset(path=args.dataset, use_labels=True, max_size=None, xflip=False)
     dataset_pairs = PairwiseImageDataset(dataset_images, size=args.pairwise_dataset_size)
