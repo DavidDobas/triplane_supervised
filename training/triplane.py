@@ -23,7 +23,7 @@ class TriPlaneGenerator(torch.nn.Module):
         # w_dim,                      # Intermediate latent (W) dimensionality.
         img_resolution,             # Output resolution.
         img_channels,               # Number of output color channels.
-        # sr_num_fp16_res     = 0,
+        sr_num_fp16_res     = 0,
         # mapping_kwargs      = {},   # Arguments for MappingNetwork.
         rendering_kwargs    = {},
         sr_kwargs = {},
@@ -74,12 +74,11 @@ class TriPlaneGenerator(torch.nn.Module):
         #     planes = self.backbone.synthesis(ws, update_emas=update_emas, **synthesis_kwargs)
         # if cache_backbone:
         #     self._last_planes = planes
-
         planes = self.conv(images)
+        planes = planes.squeeze(1)
 
         # Reshape output into three 32-channel planes
         planes = planes.view(len(planes), 3, 32, planes.shape[-2], planes.shape[-1])
-
         # Perform volume rendering
         feature_samples, depth_samples, weights_samples = self.renderer(planes, self.decoder, ray_origins, ray_directions, self.rendering_kwargs) # channels last
 
@@ -89,10 +88,14 @@ class TriPlaneGenerator(torch.nn.Module):
         depth_image = depth_samples.permute(0, 2, 1).reshape(N, 1, H, W)
 
         # Run superresolution to get final image
-        rgb_image = feature_image[:, :3]
+        rgb_image = feature_image[:, :1].contiguous()
+        # Upscale from 64x64 to 128x128 using bilinear interpolation
+        rgb_image = torch.nn.functional.interpolate(rgb_image, size=(128, 128), mode='bilinear', align_corners=False)
+
         # sr_image = self.superresolution(rgb_image, feature_image, ws, noise_mode=self.rendering_kwargs['superresolution_noise_mode'], **{k:synthesis_kwargs[k] for k in synthesis_kwargs.keys() if k != 'noise_mode'})
 
-        return {'image_raw': rgb_image, 'image_depth': depth_image}
+        # return {'image_raw': rgb_image, 'image_depth': depth_image}
+        return rgb_image
     
     def sample(self, coordinates, directions, z, c, truncation_psi=1, truncation_cutoff=None, update_emas=False, **synthesis_kwargs):
         # Compute RGB features, density for arbitrary 3D coordinates. Mostly used for extracting shapes. 

@@ -95,7 +95,10 @@ class Dataset(torch.utils.data.Dataset):
         if self._xflip[idx]:
             assert image.ndim == 3 # CHW
             image = image[:, :, ::-1]
-        return image.copy(), self.get_label(idx)
+        image = torch.tensor(image, dtype=torch.float32)
+        # Normalize to 0-1
+        image = image / 255.0
+        return image, self.get_label(idx)
 
     def get_label(self, idx):
         label = self._get_raw_labels()[self._raw_idx[idx]]
@@ -103,7 +106,7 @@ class Dataset(torch.utils.data.Dataset):
             onehot = np.zeros(self.label_shape, dtype=np.float32)
             onehot[label] = 1
             label = onehot
-        return label.copy()
+        return torch.tensor(label, dtype=torch.float32)
 
     def get_details(self, idx):
         d = dnnlib.EasyDict()
@@ -243,5 +246,46 @@ class ImageFolderDataset(Dataset):
         labels = labels.astype({1: np.int64, 2: np.float32}[labels.ndim])
         return labels
     
+class PairwiseImageDataset(torch.utils.data.Dataset):
+    def __init__(self, dataset):
+        """Create a pairwise dataset from a base ImageFolderDataset.
+        
+        Args:
+            dataset: Base ImageFolderDataset where each item is (image, camera_params)
+        """
+        self.dataset = dataset
+        self.n = len(dataset)
+        
+        # Pre-compute all possible pairs of indices
+        self.pairs = [(i, j) for i in range(self.n) for j in range(self.n) if i != j]
+
+    def __len__(self):
+        return len(self.pairs)
+
+    def __getitem__(self, idx):
+        i, j = self.pairs[idx]
+        
+        # Get items from base dataset
+        img_i, cam_i = self.dataset[i]
+        img_j, cam_j = self.dataset[j]
+        # # Are there nans in the images?
+        # print("img_i.isnan().any()", img_i.isnan().any())
+        # print("img_j.isnan().any()", img_j.isnan().any())
+        # # Are there nans in the camera parameters?
+        # print("cam_i.isnan().any()", cam_i.isnan().any())
+        # print("cam_j.isnan().any()", cam_j.isnan().any())
+
+        # Compute camera parameter difference
+        cam_diff = cam_i - cam_j
+
+        #If there are nans in the camera parameters, raise error and print them
+        if cam_diff.isnan().any():
+            raise ValueError("There are nans in the camera parameters")
+        
+
+        # Return (image_i, camera_diff) as input, image_j as target
+        # Did not work
+        # return (img_i, cam_diff), img_j
+        return (img_i, cam_j), img_j
 
 #----------------------------------------------------------------------------
