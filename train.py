@@ -14,13 +14,85 @@ class Args:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
-class Model(TrainableModule):
-    def __init__(self, c_dim: int = 25, img_resolution: int = 256, img_channels: int = 1, rendering_kwargs: dict = None):
+class UNet(torch.nn.Module):
+    def __init__(self, num_narrowings=3):
         super().__init__()
+        
+        # Initial convolution to get to 96 channels
+        self.init_conv = torch.nn.Conv2d(1, 96, kernel_size=3, padding=1)
+        
+        # Encoder blocks
+        self.encoder_blocks = torch.nn.ModuleList()
+        current_channels = 96
+        for i in range(num_narrowings):
+            out_channels = current_channels * 2
+            self.encoder_blocks.append(torch.nn.Sequential(
+                torch.nn.Conv2d(current_channels, out_channels, kernel_size=3, stride=2, padding=1),
+                torch.nn.BatchNorm2d(out_channels),
+                torch.nn.ReLU(inplace=True),
+                torch.nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
+                torch.nn.BatchNorm2d(out_channels),
+                torch.nn.ReLU(inplace=True)
+            ))
+            current_channels = out_channels
+            
+        # Decoder blocks
+        self.decoder_blocks = torch.nn.ModuleList()
+        for i in range(num_narrowings):
+            in_channels = current_channels
+            out_channels = current_channels // 2
+            self.decoder_blocks.append(torch.nn.Sequential(
+                torch.nn.ConvTranspose2d(in_channels, out_channels, kernel_size=2, stride=2),
+                torch.nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
+                torch.nn.BatchNorm2d(out_channels),
+                torch.nn.ReLU(inplace=True),
+                torch.nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
+                torch.nn.BatchNorm2d(out_channels),
+                torch.nn.ReLU(inplace=True)
+            ))
+            current_channels = out_channels
+            
+        # Final convolution to get back to 96 channels
+        self.final_conv = torch.nn.Conv2d(96, 96, kernel_size=1)
+
+    def forward(self, x):
+        # Initial convolution
+        x = self.init_conv(x)
+        
+        # Store encoder outputs for skip connections
+        encoder_outputs = []
+        
+        # Encoder path
+        for block in self.encoder_blocks:
+            encoder_outputs.append(x)
+            x = block(x)
+            
+        # Decoder path with skip connections
+        for block, skip in zip(self.decoder_blocks, reversed(encoder_outputs)):
+            x = block(x)
+            # Add skip connection
+            x = x + skip
+            
+        # Final 1x1 convolution
+        x = self.final_conv(x)
+        
+        return x
+
+
+class Model(TrainableModule):
+    def __init__(self, c_dim: int = 25, img_resolution: int = 256, img_channels: int = 1, rendering_kwargs: dict = None, use_unet: bool = False):
+        super().__init__()
+        # Custom
+        self.conv = torch.nn.Conv2d(in_channels=1, out_channels=96, kernel_size=1, stride=1, padding=0)
         self.generator = TriPlaneGenerator(c_dim=c_dim, img_resolution=img_resolution, img_channels=img_channels, rendering_kwargs=rendering_kwargs)
 
     def forward(self, images, c):
-        generated_images = self.generator.synthesis(images, c)
+        if self.use_unet:
+            planes = self.unet(images)
+        else:
+            planes = self.conv(images)
+        planes = planes.squeeze(1)
+        generated_images = self.generator.synthesis(planes, c)
         #Normalize 0-255 to 0-1
         return generated_images / 255.0
 

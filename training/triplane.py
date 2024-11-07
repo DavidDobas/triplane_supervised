@@ -45,16 +45,13 @@ class TriPlaneGenerator(torch.nn.Module):
         self.rendering_kwargs = rendering_kwargs
     
         self._last_planes = None
-
-        # Custom
-        self.conv = torch.nn.Conv2d(in_channels=1, out_channels=96, kernel_size=1, stride=1, padding=0)
     
     def mapping(self, z, c, truncation_psi=1, truncation_cutoff=None, update_emas=False):
         if self.rendering_kwargs['c_gen_conditioning_zero']:
                 c = torch.zeros_like(c)
         return self.backbone.mapping(z, c * self.rendering_kwargs.get('c_scale', 0), truncation_psi=truncation_psi, truncation_cutoff=truncation_cutoff, update_emas=update_emas)
 
-    def synthesis(self, images, c, neural_rendering_resolution=None, update_emas=False, cache_backbone=False, use_cached_backbone=False, **synthesis_kwargs):
+    def synthesis(self, planes, c, neural_rendering_resolution=None, update_emas=False, cache_backbone=False, use_cached_backbone=False, **synthesis_kwargs):
         cam2world_matrix = c[:, :16].view(-1, 4, 4)
         intrinsics = c[:, 16:25].view(-1, 3, 3)
 
@@ -74,8 +71,7 @@ class TriPlaneGenerator(torch.nn.Module):
         #     planes = self.backbone.synthesis(ws, update_emas=update_emas, **synthesis_kwargs)
         # if cache_backbone:
         #     self._last_planes = planes
-        planes = self.conv(images)
-        planes = planes.squeeze(1)
+        
 
         # Reshape output into three 32-channel planes
         planes = planes.view(len(planes), 3, 32, planes.shape[-2], planes.shape[-1])
