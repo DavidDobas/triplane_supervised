@@ -33,7 +33,7 @@ def main(args):
         ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(vars(args).items())))
     ))
 
-    dataset_images = ImageFolderDataset(path=args.dataset, use_labels=True, max_size=None, xflip=False)
+    dataset_images = ImageFolderDataset(path=args.dataset, use_labels=True, max_size=None, xflip=False, size=args.pairwise_dataset_size)
     dataset_pairs = PairwiseImageDataset(dataset_images)
 
     generator = torch.Generator().manual_seed(42)
@@ -55,7 +55,8 @@ if __name__ == '__main__':
     args = Args(batch_size=8,
                 epochs=10,
                 lr=1e-3,
-                dataset='datasets/chest_128.zip',)
+                dataset='datasets/chest_128.zip',
+                pairwise_dataset_size=10000)
     args.rendering_kwargs = rendering_options = {
         'image_resolution': 128,
         'disparity_space_sampling': False,
