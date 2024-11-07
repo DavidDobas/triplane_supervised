@@ -80,11 +80,14 @@ class UNet(torch.nn.Module):
 
 
 class Model(TrainableModule):
-    def __init__(self, c_dim: int = 25, img_resolution: int = 256, img_channels: int = 1, rendering_kwargs: dict = None, use_unet: bool = False):
+    def __init__(self, c_dim: int = 25, img_resolution: int = 256, img_channels: int = 1, rendering_kwargs: dict = None, use_unet: bool = False, num_narrowings: int = 3):
         super().__init__()
         # Custom
         self.conv = torch.nn.Conv2d(in_channels=1, out_channels=96, kernel_size=1, stride=1, padding=0)
         self.generator = TriPlaneGenerator(c_dim=c_dim, img_resolution=img_resolution, img_channels=img_channels, rendering_kwargs=rendering_kwargs)
+        self.use_unet = use_unet
+        if use_unet:
+            self.unet = UNet(num_narrowings=num_narrowings)
 
     def forward(self, images, c):
         if self.use_unet:
@@ -97,7 +100,7 @@ class Model(TrainableModule):
         return generated_images / 255.0
 
 def main(args):
-    model = Model(rendering_kwargs=args.rendering_kwargs)
+    model = Model(rendering_kwargs=args.rendering_kwargs, use_unet=args.use_unet, num_narrowings=args.num_narrowings)
 
     # Create logdir with timestamp
     timestamp = datetime.datetime.now()
@@ -140,6 +143,8 @@ if __name__ == '__main__':
         'reg_type': 'l1', # for experimenting with variations on density regularization
         'decoder_lr_mul': 1, # learning rate multiplier for decoder
         'sr_antialias': True,
+        'use_unet': False,
+        'num_narrowings': 3,
     }
     rendering_options.update({
             'depth_resolution': 64,
