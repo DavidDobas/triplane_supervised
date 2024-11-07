@@ -239,7 +239,6 @@ class ImageFolderDataset(Dataset):
             labels = json.load(f)['labels']
         if labels is None:
             return None
-        print("Im here")
         labels = dict(labels)
         labels = [labels[fname.replace('\\', '/')] for fname in self._image_fnames]
         labels = np.array(labels)

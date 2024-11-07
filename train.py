@@ -35,7 +35,6 @@ def main(args):
         optimizer=torch.optim.Adam(model.parameters(), lr=args.lr),
         loss=torch.nn.MSELoss(),
         metrics=[torchmetrics.MeanSquaredError()],
-        device='cpu'
     )
 
     model.fit(dataloader=train, epochs=args.epochs, dev=dev)
