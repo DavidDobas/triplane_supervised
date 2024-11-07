@@ -129,7 +129,9 @@ if __name__ == '__main__':
                 epochs=10,
                 lr=1e-3,
                 dataset='datasets/chest_128.zip',
-                pairwise_dataset_size=10000)
+                pairwise_dataset_size=10000,
+                use_unet=False,
+                num_narrowings=3)
     args.rendering_kwargs = rendering_options = {
         'image_resolution': 128,
         'disparity_space_sampling': False,
@@ -143,8 +145,6 @@ if __name__ == '__main__':
         'reg_type': 'l1', # for experimenting with variations on density regularization
         'decoder_lr_mul': 1, # learning rate multiplier for decoder
         'sr_antialias': True,
-        'use_unet': False,
-        'num_narrowings': 3,
     }
     rendering_options.update({
             'depth_resolution': 64,
