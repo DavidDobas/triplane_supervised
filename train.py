@@ -1,5 +1,10 @@
+import os
+import re
+import datetime
+
 import torch
 import torchmetrics
+import torcheval
 
 from training.trainable_module import TrainableModule
 from training.dataset import ImageFolderDataset, PairwiseImageDataset
@@ -22,6 +27,12 @@ class Model(TrainableModule):
 def main(args):
     model = Model(rendering_kwargs=args.rendering_kwargs)
 
+    args.logdir = os.path.join("logs_par_search", "{}-{}-{}".format(
+        os.path.basename(globals().get("__file__", "notebook")),
+        datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S"),
+        ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(vars(args).items())))
+    ))
+
     dataset_images = ImageFolderDataset(path=args.dataset, use_labels=True, max_size=None, xflip=False)
     dataset_pairs = PairwiseImageDataset(dataset_images)
 
@@ -34,7 +45,8 @@ def main(args):
     model.configure(
         optimizer=torch.optim.Adam(model.parameters(), lr=args.lr),
         loss=torch.nn.MSELoss(),
-        metrics=[torchmetrics.MeanSquaredError()],
+        metrics=[torcheval.metrics.PeakSignalNoiseRatio],
+        logdir=args.logdir,
     )
 
     model.fit(dataloader=train, epochs=args.epochs, dev=dev)
