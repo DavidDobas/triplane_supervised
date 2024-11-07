@@ -103,7 +103,7 @@ class TrainableModule(torch.nn.Module):
             self.loss_metric.update(loss)
             return {"loss": self.loss_metric.compute()} \
                 | ({"lr": self.schedule.get_last_lr()[0]} if self.schedule else {}) \
-                # | self.compute_metrics(y_pred, y, *xs, training=True)
+                | self.compute_metrics(y_pred, y, *xs, training=True)
 
     def compute_loss(self, y_pred, y, *xs):
         """Compute the loss of the model given the inputs, predictions, and target outputs."""

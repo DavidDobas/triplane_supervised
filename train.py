@@ -45,7 +45,7 @@ def main(args):
     model.configure(
         optimizer=torch.optim.Adam(model.parameters(), lr=args.lr),
         loss=torch.nn.MSELoss(),
-        metrics=[torcheval.metrics.PeakSignalNoiseRatio],
+        metrics=[torchmetrics.image.PeakSignalNoiseRatio()],
         logdir=args.logdir,
     )
 
