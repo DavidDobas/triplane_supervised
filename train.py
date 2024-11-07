@@ -33,8 +33,8 @@ def main(args):
         ",".join(("{}={}".format(re.sub("(.)[^_]*_?", r"\1", k), v) for k, v in sorted(vars(args).items())))
     ))
 
-    dataset_images = ImageFolderDataset(path=args.dataset, use_labels=True, max_size=None, xflip=False, size=args.pairwise_dataset_size)
-    dataset_pairs = PairwiseImageDataset(dataset_images)
+    dataset_images = ImageFolderDataset(path=args.dataset, use_labels=True, max_size=None, xflip=False)
+    dataset_pairs = PairwiseImageDataset(dataset_images, size=args.pairwise_dataset_size)
 
     generator = torch.Generator().manual_seed(42)
     train, dev = torch.utils.data.random_split(dataset_pairs, [int(0.9*len(dataset_pairs)), len(dataset_pairs) - int(0.9*len(dataset_pairs))], generator=generator)
