@@ -153,9 +153,17 @@ def main(args):
         loss = torch.nn.MSELoss()
     else:
         raise ValueError(f"Invalid loss function: {args.loss}")
+    
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
+
+    if args.cosine_schedule:
+        schedule = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs*len(train), eta_min=0)
+    else:
+        schedule=None
 
     model.configure(
-        optimizer=torch.optim.Adam(model.parameters(), lr=args.lr),
+        optimizer=optimizer,
+        schedule=schedule,
         loss=loss,
         metrics=[torchmetrics.image.PeakSignalNoiseRatio()],
         logdir=args.logdir,
@@ -183,6 +191,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Train a model with specified parameters.")
     parser.add_argument('--epochs', type=int, default=10, help='Number of epochs to train the model.')
     parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate for the optimizer.')
+    parser.add_argument('--cosine_schedule', type=bool, default=False, help='Whether to use a cosine schedule for the optimizer.')
     parser.add_argument('--batch_size', type=int, default=8, help='Batch size for training.')
     parser.add_argument('--use_unet', type=bool, default=True, help='Whether to use U-Net in the model.')
     parser.add_argument('--num_narrowings', type=int, default=3, help='Number of narrowings in the U-Net.')
