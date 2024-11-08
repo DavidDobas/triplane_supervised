@@ -83,19 +83,7 @@ class TriPlaneGenerator(torch.nn.Module):
         feature_image = feature_samples.permute(0, 2, 1).reshape(N, feature_samples.shape[-1], H, W).contiguous()
         depth_image = depth_samples.permute(0, 2, 1).reshape(N, 1, H, W)
 
-        # Run superresolution to get final image
-        rgb_image = feature_image[:, :3].contiguous()
-        # Upscale from 64x64 to 128x128 using bilinear interpolation
-        rgb_image = torch.nn.functional.interpolate(rgb_image, size=(128, 128), mode='bilinear', align_corners=False)
-
-        # Convert RGB image to greyscale
-        rgb_weights = torch.tensor([0.2989, 0.5870, 0.1140], device=rgb_image.device, dtype=rgb_image.dtype)
-        grayscale_image = torch.sum(rgb_image * rgb_weights[None, :, None, None], dim=1, keepdim=True)
-
-        # sr_image = self.superresolution(rgb_image, feature_image, ws, noise_mode=self.rendering_kwargs['superresolution_noise_mode'], **{k:synthesis_kwargs[k] for k in synthesis_kwargs.keys() if k != 'noise_mode'})
-
-        # return {'image_raw': rgb_image, 'image_depth': depth_image}
-        return grayscale_image
+        return feature_image
     
     def sample(self, coordinates, directions, z, c, truncation_psi=1, truncation_cutoff=None, update_emas=False, **synthesis_kwargs):
         # Compute RGB features, density for arbitrary 3D coordinates. Mostly used for extracting shapes. 

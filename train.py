@@ -82,7 +82,7 @@ class UNet(torch.nn.Module):
 
 
 class Model(TrainableModule):
-    def __init__(self, c_dim: int = 25, img_resolution: int = 256, img_channels: int = 1, rendering_kwargs: dict = None, use_unet: bool = False, num_narrowings: int = 3):
+    def __init__(self, c_dim: int = 25, img_resolution: int = 256, img_channels: int = 1, rendering_kwargs: dict = None, use_unet: bool = False, num_narrowings: int = 3, args: Args = None):
         super().__init__()
         # Custom
         self.conv = torch.nn.Conv2d(in_channels=1, out_channels=96, kernel_size=1, stride=1, padding=0)
@@ -90,15 +90,40 @@ class Model(TrainableModule):
         self.use_unet = use_unet
         if use_unet:
             self.unet = UNet(num_narrowings=num_narrowings)
-
+        self.args = args.copy()
+        if args.use_final_cnn:
+            # Upscaling convolution from [N,32,64,64] to [N,16,128,128]
+            self.upscale_conv = torch.nn.ConvTranspose2d(32, 16, kernel_size=2, stride=2)
+            # Final convolution to single channel [N,1,128,128]
+            self.final_conv = torch.nn.Conv2d(16, 1, kernel_size=3, padding=1)
     def forward(self, images, c):
         if self.use_unet:
             planes = self.unet(images)
         else:
             planes = self.conv(images)
         planes = planes.squeeze(1)
-        generated_images = self.generator.synthesis(planes, c)
-        return generated_images
+        feature_image = self.generator.synthesis(planes, c)
+
+        if args.use_final_cnn:
+            
+            
+            # Apply the convolutions
+            feature_image = self.upscale_conv(feature_image)
+            feature_image = self.final_conv(feature_image)
+            return feature_image
+
+        rgb_image = feature_image[:, :3].contiguous()
+        # Upscale from 64x64 to 128x128 using bilinear interpolation
+        rgb_image = torch.nn.functional.interpolate(rgb_image, size=(128, 128), mode='bilinear', align_corners=False)
+
+        # Convert RGB image to greyscale
+        rgb_weights = torch.tensor([0.2989, 0.5870, 0.1140], device=rgb_image.device, dtype=rgb_image.dtype)
+        grayscale_image = torch.sum(rgb_image * rgb_weights[None, :, None, None], dim=1, keepdim=True)
+
+        # sr_image = self.superresolution(rgb_image, feature_image, ws, noise_mode=self.rendering_kwargs['superresolution_noise_mode'], **{k:synthesis_kwargs[k] for k in synthesis_kwargs.keys() if k != 'noise_mode'})
+
+        # return {'image_raw': rgb_image, 'image_depth': depth_image}
+        return grayscale_image
 
 def main(args):
     model = Model(rendering_kwargs=args.rendering_kwargs, use_unet=args.use_unet, num_narrowings=args.num_narrowings)
