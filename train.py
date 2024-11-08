@@ -11,7 +11,7 @@ import torchvision
 from training.trainable_module import TrainableModule
 from training.dataset import ImageFolderDataset, PairwiseImageDataset
 from training.triplane import TriPlaneGenerator
-
+from training.loss import SSIMLoss, MSESSIMLoss, PerceptualLoss
 class Args:
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
@@ -120,9 +120,18 @@ def main(args):
     train = torch.utils.data.DataLoader(train, batch_size=args.batch_size, shuffle=True)
     dev = torch.utils.data.DataLoader(dev, batch_size=args.batch_size)
 
+    if args.loss == 'mse_ssim':
+        loss = MSESSIMLoss()
+    elif args.loss == 'perceptual':
+        loss = PerceptualLoss()
+    elif args.loss == 'mse':
+        loss = torch.nn.MSELoss()
+    else:
+        raise ValueError(f"Invalid loss function: {args.loss}")
+
     model.configure(
         optimizer=torch.optim.Adam(model.parameters(), lr=args.lr),
-        loss=torch.nn.MSELoss(),
+        loss=loss,
         metrics=[torchmetrics.image.PeakSignalNoiseRatio()],
         logdir=args.logdir,
     )
@@ -151,6 +160,8 @@ def parse_args():
     parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate for the optimizer.')
     parser.add_argument('--batch_size', type=int, default=8, help='Batch size for training.')
     parser.add_argument('--use_unet', type=bool, default=True, help='Whether to use U-Net in the model.')
+    parser.add_argument('--num_narrowings', type=int, default=3, help='Number of narrowings in the U-Net.')
+    parser.add_argument('--loss', type=str, default='mse', help='Loss function to use.')
     return parser.parse_args()
 
 args_user = parse_args()
