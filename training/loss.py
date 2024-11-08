@@ -2,12 +2,12 @@ import torch
 import torchmetrics
 import torch.nn as nn
 import torchvision.models as models
-
+from torchmetrics.image import StructuralSimilarityIndexMeasure
 
 class SSIMLoss(torch.nn.Module):
     def __init__(self, data_range=1.0, channel=1):
         super(SSIMLoss, self).__init__()
-        self.ssim = torchmetrics.SSIM(data_range=data_range, channel=channel)
+        self.ssim = torchmetrics.StructuralSimilarityIndexMeasure(data_range=data_range, channel=channel)
 
     def forward(self, predicted, target):
         ssim_score = self.ssim(predicted, target)
