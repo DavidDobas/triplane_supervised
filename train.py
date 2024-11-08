@@ -126,7 +126,7 @@ class Model(TrainableModule):
         return grayscale_image
 
 def main(args):
-    model = Model(rendering_kwargs=args.rendering_kwargs, use_unet=args.use_unet, num_narrowings=args.num_narrowings)
+    model = Model(rendering_kwargs=args.rendering_kwargs, use_unet=args.use_unet, num_narrowings=args.num_narrowings, args=args)
 
     # Create logdir with timestamp
     timestamp = datetime.datetime.now()
