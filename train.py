@@ -187,6 +187,7 @@ def parse_args():
     parser.add_argument('--use_unet', type=bool, default=True, help='Whether to use U-Net in the model.')
     parser.add_argument('--num_narrowings', type=int, default=3, help='Number of narrowings in the U-Net.')
     parser.add_argument('--loss', type=str, default='mse', help='Loss function to use.')
+    parser.add_argument('--use_final_cnn', type=bool, default=False, help='Whether to use a final CNN to upscale the image.')
     return parser.parse_args()
 
 args_user = parse_args()
@@ -228,5 +229,6 @@ if __name__ == '__main__':
     args.batch_size = args_user.batch_size
     args.use_unet = args_user.use_unet
     args.loss = args_user.loss
+    args.use_final_cnn = args_user.use_final_cnn
     print("Training for {} epochs with batch size {}".format(args.epochs, args.batch_size))
     main(args)
