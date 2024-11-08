@@ -90,7 +90,7 @@ class Model(TrainableModule):
         self.use_unet = use_unet
         if use_unet:
             self.unet = UNet(num_narrowings=num_narrowings)
-        self.args = args.copy()
+        self.args = args
         if args.use_final_cnn:
             # Upscaling convolution from [N,32,64,64] to [N,16,128,128]
             self.upscale_conv = torch.nn.ConvTranspose2d(32, 16, kernel_size=2, stride=2)
