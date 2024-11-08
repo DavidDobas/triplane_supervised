@@ -239,5 +239,6 @@ if __name__ == '__main__':
     args.use_unet = args_user.use_unet
     args.loss = args_user.loss
     args.use_final_cnn = args_user.use_final_cnn
+    args.cosine_schedule = args_user.cosine_schedule
     print("Training for {} epochs with batch size {}".format(args.epochs, args.batch_size))
     main(args)
