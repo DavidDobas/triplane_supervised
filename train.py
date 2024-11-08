@@ -202,5 +202,6 @@ if __name__ == '__main__':
     args.lr = args_user.lr
     args.batch_size = args_user.batch_size
     args.use_unet = args_user.use_unet
+    args.loss = args_user.loss
     print("Training for {} epochs with batch size {}".format(args.epochs, args.batch_size))
     main(args)
